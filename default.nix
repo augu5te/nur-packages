@@ -8,14 +8,26 @@
 
 { pkgs ? import <nixpkgs> {} }:
 
-{
+rec {
   # The `lib`, `modules`, and `overlay` names are special
   lib = import ./lib { inherit pkgs; }; # functions
   modules = import ./modules; # NixOS modules
   overlays = import ./overlays; # nixpkgs overlays
 
-  example-package = pkgs.callPackage ./pkgs/example-package { };
-  # some-qt5-package = pkgs.libsForQt5.callPackage ./pkgs/some-qt5-package { };
-  # ...
+  glibc-batsky = pkgs.glibc.overrideAttrs (attrs: {
+    patches = attrs.patches ++ [ ./pkgs/glibc-batsky/clock_gettime.patch
+      ./pkgs/glibc-batsky/gettimeofday.patch ];
+  });
+
+  batsky = pkgs.callPackage ./pkgs/batsky { };
+
+  slurm-multiple-slurmd = pkgs.slurm.overrideAttrs (oldAttrs: {configureFlags = oldAttrs.configureFlags ++ ["--enable-multiple-slurmd"];});
+
+  bs-slurm = pkgs.replaceDependency {
+    drv = slurm-multiple-slurmd;
+    oldDependency = pkgs.glibc;
+    newDependency = glibc-batsky;
+  };
+  
 }
 

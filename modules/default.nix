@@ -1,6 +1,6 @@
 {
-  # Add your NixOS modules here
-  #
-  # my-module = ./my-module;
+  batsky = ./services/batsky.nix;
+  bs-slurm = ./services/bs-slurm.nix;
+  rs-munge = ./services/bs-munge.nix;
 }
 
