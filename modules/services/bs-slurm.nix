@@ -260,7 +260,6 @@ in
         '';
       };
 
-
     };
 
   };
@@ -305,7 +304,7 @@ in
     environment.systemPackages = [ wrappedSlurm ];
 
     # TODO HOW to ref other services ??? 
-    # services.bs-munge.enable = mkDefault true;
+    services.bs-munge.enable = mkDefault true;
     
     # use a static uid as default to ensure it is the same on all nodes
     users.users.slurm = mkIf (cfg.user == defaultUser) {
@@ -323,18 +322,22 @@ in
       wantedBy = [ "multi-user.target" ];
       after = [ "systemd-tmpfiles-clean.service" "batsky.service"];
 
+      script =  mkIf (cfg.client.rangeId > 1) ''
+        nodeId=${toString cfg.client.nodeId}
+        rangeId=${toString cfg.client.rangeId}
+        for (( i=$nodeId; i<$(($nodeId+$rangeId)); i++ ))
+        do  
+          ${wrappedSlurm}/bin/slurmd -N node$i &
+          pids[''${i}]=$!
+        done
 
-      # script = ''
-      #   nodeId=${toString cfg.client.nodeId}
-      #   rangeId=${toString cfg.client.rangeId}
-      #   for (( i=$nodeId; i<$(($nodeId+$rangeId)); i++ ))
-      #   do  
-      #   ${wrappedSlurm}/bin/slurmd -N node$i &
-      #   done
-      #'';
-
-      
-      serviceConfig = {
+        # wait for all pids
+         for pid in ''${pids[*]}; do
+         wait $pid
+        done
+      '';
+ 
+      serviceConfig = mkIf (cfg.client.rangeId == 1) {
         Type = "forking";
         KillMode = "process";
         ExecStart = "${wrappedSlurm}/bin/slurmd";
