@@ -334,7 +334,7 @@ in
 
       serviceConfig = {
         Type = "forking";
-        ExecStart = "${wrappedSlurm}/bin/slurmctld";
+        ExecStart = "${wrappedSlurm}/bin/slurmctld -c";
         PIDFile = "/run/slurmctld.pid";
         ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
       };
