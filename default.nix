@@ -21,6 +21,8 @@ rec {
 
   batsky = pkgs.callPackage ./pkgs/batsky { };
 
+  slurm-simulator =  pkgs.callPackage ./pkgs/slurm-simulator { libmysqlclient = pkgs.libmysql; };
+  
   slurm-multiple-slurmd = pkgs.slurm.overrideAttrs (oldAttrs: {
     configureFlags = oldAttrs.configureFlags ++ ["--enable-multiple-slurmd"];});
   
