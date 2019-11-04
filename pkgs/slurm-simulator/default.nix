@@ -13,8 +13,8 @@ let
   };
   "17" = {
     bsc_simulatorVersion = "bsc-v17";
-    rev = "cdef8c5cdfe0ba3e548e01e6d8e52ac2fb82bcfd"; 
-    sha256 = "1c05rqvdd39y3zbrv4y4adrfvcl18s00avfj4j49ap9xp6z83138";
+    rev="0fc334bdbc5942d1a27f42f635afcb8d58e46e9b";
+    sha256 = "0ib07c4x781z8ih4bj6j5pqjyz43x94q5mkp5favvpzqbb1z00dr";
   };
 };
 in
@@ -25,12 +25,12 @@ stdenv.mkDerivation rec {
   name = "slurm-simulator-${bsc_simulatorVersion}";
 
   src = fetchFromGitHub {
-    owner = "BSC-RM";
+    owner = "augu5te";
     repo = "slurm_simulator";
     inherit rev;
     inherit sha256;
   };
-
+  
   outputs = [ "out" "dev" ];
 
   # nixos test fails to start slurmd with 'undefined symbol: slurm_job_preempt_mode'
