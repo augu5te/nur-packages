@@ -13,8 +13,8 @@ python37Packages.buildPythonApplication rec {
   src = fetchFromGitHub {
     owner = "oar-team";
     repo = "batsky";
-    rev = "d18cac7666fdea9d07383fca2097dc06c6c079b5";
-    sha256 = "17lakcbdfpwi6d8648cb7x6hmm0vylry2336zb901fl04h7d5l75";
+    rev = "3e9f14a4bdaac56d934c31f888858ac7a9f645c8";
+    sha256 = "0s1bvbi65gc5304zh9yv4jr60jvgb5g0wx6p2fm5vn28lplvcdkf";
   };
 
   propagatedBuildInputs = with python37Packages; [
