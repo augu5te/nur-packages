@@ -290,7 +290,7 @@ in
             cfg.client.enable ||
             cfg.server.enable ||
             cfg.dbdserver.enable ) {
-
+    
     environment.systemPackages = [ wrappedSlurm ];
     
     # use a static uid as default to ensure it is the same on all nodes
