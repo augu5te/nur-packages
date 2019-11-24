@@ -7,6 +7,9 @@ let
 in {
   options.programs.oar = {
     enable = mkEnableOption "oar";
+
+
+    
   };
   config = mkIf cfg.enable {
     security.wrappers.oarstat = {

@@ -40,8 +40,8 @@ python37Packages.buildPythonApplication rec {
   doCheck = false;
 
   postInstall = ''
-    mkdir -p $out/setup
-    cp setup/database/pg_structure.sql $out/setup/
+    cp -r setup $out
+    cp -r oar/tools $out
   '';
 
   meta = with stdenv.lib; {
