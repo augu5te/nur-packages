@@ -1,6 +1,6 @@
 { stdenv, pkgs, fetchgit, fetchFromGitHub, python37Packages, zeromq, procset, sqlalchemy_utils, pybatsim,  pytest_flask}:
 
-python37Packages.buildPythonApplication rec {
+python37Packages.buildPythonPackage rec {
   name = "oar-${version}";
   version = "3.0.0.dev3";
   
@@ -13,8 +13,8 @@ python37Packages.buildPythonApplication rec {
   src = fetchFromGitHub {
     owner = "oar-team";
     repo = "oar3";
-    rev = "34d728cb7d2a970cdf611e8dcbdb22df477f03ac";
-    sha256 = "03nkf2xpkqmr7qyr7isk6rs9cxpcm1vigjsr224w24yrxifsp0ml";
+    rev = "72e13645377e72c5cca8324bd7e0a6f91ffe8777";
+    sha256 = "05x0nkxfgb4i6k6gyrbwly35i2h36njqchrcbblqn67pgclj0cp1";
   };
 
   propagatedBuildInputs = with python37Packages; [

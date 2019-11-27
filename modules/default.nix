@@ -3,7 +3,6 @@
   bs-slurm = ./services/bs-slurm.nix;
   fe-slurm = ./services/fe-slurm.nix;
   rs-munge = ./services/bs-munge.nix;
-  oar-program = ./programs/oar.nix;
   oar-service = ./services/oar.nix;
 }
 
