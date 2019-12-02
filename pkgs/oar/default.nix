@@ -13,8 +13,8 @@ python37Packages.buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "oar-team";
     repo = "oar3";
-    rev = "72e13645377e72c5cca8324bd7e0a6f91ffe8777";
-    sha256 = "05x0nkxfgb4i6k6gyrbwly35i2h36njqchrcbblqn67pgclj0cp1";
+    rev = "060d183386e364d3be6a70561f3e85c197537152";
+    sha256 = "1cq92bbp6s4cbj4l147n1gms206pxnsdsw9zniz4fsbk4cs4fwp1";
   };
 
   propagatedBuildInputs = with python37Packages; [

@@ -53,10 +53,12 @@ oarTools = pkgs.stdenv.mkDerivation {
          --replace "%%OARDIR%%" /run/wrappers/bin \
          --replace "%%OARCONFDIR%%" /etc/oar \
          --replace "%%XAUTHCMDPATH%%" /run/current-system/sw/bin/xauth \
+         --replace "%%ROOTUSER%%" root \
          --replace "%%OAROWNER%%" oar
 
+      $CC -Wall -O2 oardodo.c -o $out/oardodo
       $CC -Wall -O2 oardodo.c -o $out/oardodo_toWrap
-      
+
       #oardo -> cli
       gen_oardo () {
         substitute ${cfg.package}/tools/oardo.c.in oardo.c\
@@ -103,13 +105,13 @@ in
 
       privateKeyFile =  mkOption {
           type = types.str;
-          default = "/run/keys/oar_key";
+          default = "/run/keys/oar_id_rsa_key";
           description = "Private key for oar user";
       };
 
       publicKeyFile =  mkOption {
           type = types.str;
-          default = "/run/keys/oar_key.pub";
+          default = "/run/keys/oar_id_rsa_key.pub";
           description = "Public key for oar user";
       };
       
@@ -196,16 +198,16 @@ in
     environment.etc."oar-base.conf" = { mode = "0600"; source = oarBaseConf; };
 
     # add package
-    environment.systemPackages =  [ oarTools pkgs.xorg.xauth pkgs.nur.repos.augu5te.oar ];
+    environment.systemPackages =  [ oarTools pkgs.taktuk pkgs.xorg.xauth pkgs.nur.repos.augu5te.oar ];
     
     # oardodo
     security.wrappers.oardodo = {
-      source = "${oarTools}/oardodo_toWrap";
-      owner = "root";
-      group = "root";
-      setuid = true;
-      permissions = "u+rx,g+x,o+x";
-    };
+       source = "${oarTools}/oardodo_toWrap";
+       owner = "root";
+       group = "oar";
+       setuid = true;
+       permissions = "u+rwx,g+rx";
+     };
     
     security.wrappers.oarsub = {
       source = "${oarTools}/oarsub";
@@ -256,7 +258,6 @@ in
       #shell = pkgs.bashInteractive;
       shell = "${oarTools}/bin/oarsh_shell";
       group = "oar";
-      #openssh.authorizedKeys.keys = [ cfg.oarPublicKey ];
       uid = 745;
       # openssh
     };
@@ -267,7 +268,13 @@ in
       before = [ "network.target" ];
       serviceConfig.Type = "oneshot";
       script = ''
+        # TODO oar/log proper handling
+        touch /tmp/oar.log
+        chmod 666 /tmp/oar.log
+
         mkdir -p ${cfg.oarHomeDir}
+        chown oar:oar ${cfg.oarHomeDir}
+
         echo "[ -f ${cfg.oarHomeDir}/.bash_oar ] && . ${cfg.oarHomeDir}/.bash_oar" > ${cfg.oarHomeDir}/.bashrc
         echo "[ -f ${cfg.oarHomeDir}/.bash_oar ] && . ${cfg.oarHomeDir}/.bash_oar" > ${cfg.oarHomeDir}/.bash_profile
         cat <<EOF > ${cfg.oarHomeDir}/.bash_oar
@@ -303,14 +310,15 @@ in
         Protocol 2
         EOF
         
-        cp ${cfg.privateKeyFile} .ssh/oar_key
-        cp ${cfg.publicKeyFile} .ssh/oar_key.pub
-        cat ${cfg.publicKeyFile} > .ssh/authorized_keys
+        cp ${cfg.privateKeyFile} .ssh/id_rsa
+        cp ${cfg.publicKeyFile} .ssh/id_rsa.pub
+        echo -n 'environment="OAR_KEY=1" ' > .ssh/authorized_keys
+        cat ${cfg.publicKeyFile} >> .ssh/authorized_keys
 
         chown -R oar:oar .ssh
         chmod 700 .ssh
         chmod 600 .ssh/*
-        chmod 644 .ssh/oar_key.pub
+        chmod 644 .ssh/id_rsa.pub
       '';
     };
 
@@ -321,6 +329,10 @@ in
       serviceConfig.Type = "oneshot";
       script = ''
         mkdir -p /etc/oar
+
+        # copy some needed or useful script
+        cp ${cfg.package}/tools/*.pl ${cfg.package}/tools/*.sh /etc/oar/
+
         cat <<EOF > /etc/oar/oar.conf
 #
 # Database type ("mysql" or "Pg")
@@ -381,6 +393,8 @@ OAR_RUNTIME_DIRECTORY="/var/lib/oar"
 #LOG_FILE="/var/log/oar.log"
 LOG_FILE="/tmp/oar.log"
 
+DEBUG_REMOTE_COMMANDS="yes"
+
 # Specify where we are connected with a job of the deploy type
 DEPLOY_HOSTNAME="frontend"
 
@@ -423,7 +437,7 @@ OPENSSH_CMD="${pkgs.openssh}/bin/ssh -p 6667"
 # (with your options except "-m" and "-o").
 # You don t also have to give any taktuk command.
 # (taktuk version must be >= 3.6)
-TAKTUK_CMD="/usr/bin/taktuk -t 30 -s"
+TAKTUK_CMD="taktuk -t 30 -s"
 
 # Change the meta scheduler in use.
 #META_SCHED_CMD="oar_meta_sched"
@@ -896,7 +910,7 @@ JOB_RESOURCE_MANAGER_PROPERTY_DB_FIELD="cpuset"
 # Name of the perl script that manages cpuset.
 # (default is /etc/oar/job_resource_manager.pl which handles the linux kernel
 # cpuset, job keys, clean processes, ...)
-JOB_RESOURCE_MANAGER_FILE="/etc/oar/job_resource_manager_cgroups.pl"
+JOB_RESOURCE_MANAGER_FILE="/srv/job_resource_manager_cgroups_nixos.pl"
 
 # Path of the relative directory where the cpusets will be created on each
 # nodes(same value than in /proc/self/cpuset).
@@ -1060,7 +1074,8 @@ EOF
         fi   
       '';
       serviceConfig = {
-        ExecStart = " ${pkgs.openssh}/bin/sshd -f /srv/sshd.conf";
+        #ExecStart = " ${pkgs.openssh}/bin/sshd -f /srv/sshd.conf";
+        ExecStart = " ${pkgs.openssh}/bin/sshd -f /srv/sshd_config";
         KillMode = "process";
         Restart = "always";
         Type = "simple";
