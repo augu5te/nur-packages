@@ -56,7 +56,6 @@ oarTools = pkgs.stdenv.mkDerivation {
          --replace "%%ROOTUSER%%" root \
          --replace "%%OAROWNER%%" oar
 
-      $CC -Wall -O2 oardodo.c -o $out/oardodo
       $CC -Wall -O2 oardodo.c -o $out/oardodo_toWrap
 
       #oardo -> cli
@@ -212,7 +211,7 @@ in
     security.wrappers.oarsub = {
       source = "${oarTools}/oarsub";
       owner = "root";
-      group = "root";
+      group = "oar";
       setuid = true;
       permissions = "u+rx,g+x,o+x";
     };
@@ -220,7 +219,7 @@ in
     security.wrappers.oarstat = {
       source = "${oarTools}/oarstat";
       owner = "root";
-      group = "root";
+      group = "oar";
       setuid = true;
       permissions = "u+rx,g+x,o+x";
     };
@@ -228,7 +227,7 @@ in
     security.wrappers.oardel = {
       source = "${oarTools}/oardel";
       owner = "root";
-      group = "root";
+      group = "oar";
       setuid = true;
       permissions = "u+rx,g+x,o+x";
     };
@@ -236,7 +235,7 @@ in
     security.wrappers.oarnodes = {
       source = "${oarTools}/oarnodes";
       owner = "root";
-      group = "root";
+      group = "oar";
       setuid = true;
       permissions = "u+rx,g+x,o+x";
     };
@@ -244,12 +243,10 @@ in
     security.wrappers.oarnodesetting = {
       source = "${oarTools}/oarnodesetting";
       owner = "root";
-      group = "root";
+      group = "oar";
       setuid = true;
       permissions = "u+rx,g+x,o+x";
     };
-
-
     
     # oar user declaration
     users.users.oar = mkIf ( cfg.client.enable || cfg.node.enable || cfg.server.enable )  {
@@ -339,7 +336,7 @@ in
 DB_TYPE="Pg"
 
 # DataBase hostname
-DB_HOSTNAME="localhost"
+DB_HOSTNAME="server"
 
 # DataBase port
 DB_PORT="5432"
@@ -437,7 +434,7 @@ OPENSSH_CMD="${pkgs.openssh}/bin/ssh -p 6667"
 # (with your options except "-m" and "-o").
 # You don t also have to give any taktuk command.
 # (taktuk version must be >= 3.6)
-TAKTUK_CMD="taktuk -t 30 -s"
+TAKTUK_CMD="/run/current-system/sw/bin/taktuk -t 30 -s"
 
 # Change the meta scheduler in use.
 #META_SCHED_CMD="oar_meta_sched"
@@ -1092,6 +1089,8 @@ EOF
       restartIfChanged = false;
       environment.OARDIR = "${cfg.package}/bin";
       serviceConfig = {
+        User = "oar";
+        Group = "oar";
         ExecStart = "${cfg.package}/bin/oar3-almighty";
         KillMode = "process";
         Restart = "on-failure";
@@ -1102,8 +1101,16 @@ EOF
     # Database section 
     
     services.postgresql = mkIf cfg.dbserver.enable {
+      #TODO TOCOMPLETE (UNSAFE)
       enable = true;
       enableTCPIP = true;
+      authentication = mkForce
+      ''
+        # Generated file; do not edit!
+        local all all              ident
+        host  all all 0.0.0.0/0 md5
+        host  all all ::0.0.0.0/96  md5
+      '';
     };
 
     #networking.firewall.allowedTCPPorts = mkIf cfg.dbserver.enable [5432];

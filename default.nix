@@ -28,8 +28,10 @@ rec {
   pybatsim = pkgs.callPackage ./pkgs/pybatsim { inherit procset; };
 
   pytest_flask = pkgs.callPackage ./pkgs/pytest-flask { };
+
+  remote_pdb = pkgs.callPackage ./pkgs/remote-pdb { };
   
-  oar = pkgs.callPackage ./pkgs/oar { inherit procset sqlalchemy_utils pytest_flask pybatsim; };
+  oar = pkgs.callPackage ./pkgs/oar { inherit procset sqlalchemy_utils pytest_flask pybatsim remote_pdb; };
 
   sqlalchemy_utils = pkgs.callPackage ./pkgs/sqlalchemy-utils { };
   

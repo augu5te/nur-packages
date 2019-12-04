@@ -1,8 +1,10 @@
-{ stdenv, pkgs, fetchgit, fetchFromGitHub, python37Packages, zeromq, procset, sqlalchemy_utils, pybatsim,  pytest_flask}:
+{ stdenv, pkgs, fetchgit, fetchFromGitHub, python37Packages, zeromq, procset, sqlalchemy_utils, pybatsim,  pytest_flask, remote_pdb}:
 
 python37Packages.buildPythonPackage rec {
   name = "oar-${version}";
   version = "3.0.0.dev3";
+
+  src = /home/auguste/dev/oar3;
   
   #src = fetchgit {
   #  url = /home/auguste/dev/oar3;
@@ -10,12 +12,12 @@ python37Packages.buildPythonPackage rec {
   #  rev = "d18cac7666fdea9d07383fca2097dc06c6c079b5";
   #};
 
-  src = fetchFromGitHub {
-    owner = "oar-team";
-    repo = "oar3";
-    rev = "060d183386e364d3be6a70561f3e85c197537152";
-    sha256 = "1cq92bbp6s4cbj4l147n1gms206pxnsdsw9zniz4fsbk4cs4fwp1";
-  };
+  # src = fetchFromGitHub {
+  #   owner = "oar-team";
+  #   repo = "oar3";
+  #   rev = "060d183386e364d3be6a70561f3e85c197537152";
+  #   sha256 = "1cq92bbp6s4cbj4l147n1gms206pxnsdsw9zniz4fsbk4cs4fwp1";
+  # };
 
   propagatedBuildInputs = with python37Packages; [
     pyzmq
@@ -34,6 +36,7 @@ python37Packages.buildPythonPackage rec {
     pybatsim
     pytest_flask
     psycopg2
+    remote_pdb
   ];
 
   # Tests do not pass
