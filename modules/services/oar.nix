@@ -181,9 +181,15 @@ in
       server = {
         enable = mkEnableOption "OAR server";
       };
+      
       dbserver = {
         enable = mkEnableOption "OAR database";
       };
+
+      web = {
+        enable = mkEnableOption "OAR web apps and rest-api";
+      };
+      
     };
   };
   ###### implementation
@@ -987,7 +993,7 @@ OARSTAT_DEFAULT_OUTPUT_FORMAT=2
 # Disable this if you are not ok with a simple pidentd "authentication"
 # It is safe enough if you fully trust the client hosts (with an apropriate
 # ip-based access control into apache for example)
-#API_TRUST_IDENT="1"
+API_TRUST_IDENT="1"
 
 # Custom header for the html browsable format of the API
 #API_HTML_HEADER="/etc/oar/api_html_header.pl"
@@ -1115,7 +1121,7 @@ EOF
 
     #networking.firewall.allowedTCPPorts = mkIf cfg.dbserver.enable [5432];
         
-    systemd.services.oardb-init = mkIf (cfg.dbserver.enable) {
+    systemd.services.oardb-init = mkIf cfg.dbserver.enable {
       #pgSuperUser = config.services.postgresql.superUser;
       requires = [ "postgresql.service" ];
       after = [ "postgresql.service" ];
@@ -1139,7 +1145,73 @@ EOF
         fi
         '';
       serviceConfig.Type = "oneshot";
-    };   
+    };
+
+    #################
+    # Web Section
+
+    services.nginx = mkIf cfg.web.enable {
+      enable = true;
+      user = "oar";
+      group = "oar";
+      virtualHosts.default = {
+        root = "${pkgs.nix.doc}/share/doc/nix/manual";
+        extraConfig = ''
+          location @oarapi {
+            rewrite ^/oarapi-priv/?(.*)$ /$1 break;
+            rewrite ^/oarapi/?(.*)$ /$1 break;
+          
+            include ${pkgs.nginx}/conf/uwsgi_params;
+          
+            #add_header 'Content-Type' 'application/json';
+          
+            uwsgi_pass unix:/run/uwsgi/oarapi.sock;
+            uwsgi_param HTTP_X_REMOTE_IDENT $remote_user;
+          }
+          
+          location ~ ^/oarapi-priv {
+            auth_basic "OAR API Authentication";
+            auth_basic_user_file /etc/oarapi-users;
+            error_page 404 = @oarapi;
+          }
+
+          location ~ ^/oarapi {
+            error_page 404 = @oarapi;
+          }
+        '';
+      };
+    };
+
+    services.uwsgi = mkIf cfg.web.enable {
+      enable = true;
+      plugins = [ "python3" ];
+      user = "oar";
+      group = "oar";
+      
+      instance = {
+        type = "emperor";
+        vassals.hello = {
+          socket = "/run/uwsgi/oarapi.sock";
+          type = "normal";
+          master = true;
+          workers = 2;
+          module = "oarapi:application";
+          chdir = pkgs.writeTextDir "oarapi.py" ''
+          from oar.rest_api.app import wsgi_app as application 
+          '';
+          # chdir = pkgs.writeTextDir "wsgi.py" ''
+          #   from flask import Flask, request
+          #   application = Flask(__name__)
+            
+          #   @application.route("/")
+          #   def hello():
+          #     return str(request.environ)
+          # '';
+          pythonPackages = self: with self; [ pkgs.nur.repos.augu5te.oar ];
+        };
+      };
+    };
+    
   };
 }
 

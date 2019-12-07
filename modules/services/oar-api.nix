@@ -4,25 +4,22 @@ let
   python = pkgs.python3Packages.python;
   gunicorn = pkgs.python3Packages.gunicorn;
   flask = pkgs.python3Packages.flask;
+  werkzeug = pkgs.python3Packages.werkzeug;
   cfg = config.services.oar-api;
-  test_wsgi = pkgs.writeText "test.wsgi" ''
-              import os
-              from flask import Flask
-              application = Flask(__name__)
-              
-              @application.route("/")
-              def hello():
-                 return str(os.environ)
-                 #return str(os.environ.get('X_REMOTE_IDENT'))
-               '';
-
-  myapp = pkgs.writeTextDir "myapp.py" ''
+  test_flask = pkgs.writeText "test.py" ''
+    from flask import Flask, escape, request
+    #from werkzeug.contrib.fixers import ProxyFix
     import os
-    def app(environ, start_response):
-        data = (str(os.environ)).encode('utf8')
-        start_response("200 OK", [ ("Content-Type", "text/plain"), ("Content-Length", str(len(data)))])
-        return iter([data])
-    '';    
+    
+    app = Flask(__name__)
+    #app.wsgi_app = ProxyFix(app.wsgi_app)
+
+    @app.route('/')
+    def hello():
+      #name = request.args.get("name", "World")
+      name = str(request.environ) 
+      return f'Hello, {escape(name)}!'
+    '';
 
 in
 {
@@ -42,22 +39,15 @@ in
       
       environment = let
         penv = python.buildEnv.override {
-        extraLibs = [ flask ];
+        extraLibs = [ flask werkzeug ];
       };
     in {
-        PYTHONPATH= "${penv}/${python.sitePackages}/:${myapp}";
+        PYTHONPATH= "${penv}/${python.sitePackages}/";
       };
-       
-      
+  
       serviceConfig = {
         Type = "simple";
-        ExecStart = ''${gunicorn}/bin/gunicorn myapp:app \
-              -u nginx \
-              -g nginx \
-              --workers 3 --log-level=info \
-              --bind=127.0.0.1:9000  \
-              --pid /tmp/gunicorn.pid
-            '';        
+        ExecStart = ''env FLASK_APP=${test_flask} ${python}/bin/python -m flask run '';        
       };
     };  
   };
