@@ -45,6 +45,7 @@ python37Packages.buildPythonPackage rec {
   postInstall = ''
     cp -r setup $out
     cp -r oar/tools $out
+    cp -r visualization_interfaces $out
   '';
 
   meta = with stdenv.lib; {

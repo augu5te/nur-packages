@@ -3,6 +3,10 @@
 # TODO DB_PASSWORD=$(head -n1 ${cfg.database.passwordFile})
 # TODO Assert on password prescence
 # TODO db password is visible during db creation
+# TODO readonly read-only db user
+# TODO fcgiwrap for monika
+# TODO Drawgantt
+# TODO copy monika
 
 with lib;
 
@@ -23,67 +27,84 @@ etcOar = pkgs.symlinkJoin {
 
 inherit (import ./oar-conf.nix { pkgs=pkgs; cfg=cfg;} ) oarBaseConf;
 
+oarVisualization = pkgs.stdenv.mkDerivation {
+  name = "oar_visualization";
+  phases          = [ "installPhase" ];
+  buildInputs     = [  ];
+  installPhase = ''
+    mkdir -p $out/monika
+    cp -r ${cfg.package}/visualization_interfaces/Monika/lib $out/monika/
+    cp ${cfg.package}/visualization_interfaces/Monika/monika.css $out/monika/
+
+    substitute ${cfg.package}/visualization_interfaces/Monika/monika.cgi.in $out/monika/monika.cgi \
+      --replace "%%OARCONFDIR%%" /etc/oar
+
+    substitute ${cfg.package}/visualization_interfaces/Monika/monika.conf.in $out/monika/monika.conf \
+      --replace "%%WWWROOTDIR%%" $out/monika
+  '';
+};
+
 
 oarTools = pkgs.stdenv.mkDerivation {
   name = "oar_tools";
   phases          = [ "installPhase" ];
   buildInputs     = [  ];
   installPhase = ''
-      mkdir -p $out/bin
+    mkdir -p $out/bin
 
-      #oarsh
-      substitute ${cfg.package}/tools/oarsh/oarsh.in $out/bin/oarsh \
-          --replace "%%OARHOMEDIR%%" ${cfg.oarHomeDir} \
-          --replace "%%XAUTHCMDPATH%%" /run/current-system/sw/bin/xauth \
-          --replace /usr/bin/ssh /run/current-system/sw/bin/ssh
-      chmod 755 $out/bin/oarsh    
+    #oarsh
+    substitute ${cfg.package}/tools/oarsh/oarsh.in $out/bin/oarsh \
+      --replace "%%OARHOMEDIR%%" ${cfg.oarHomeDir} \
+      --replace "%%XAUTHCMDPATH%%" /run/current-system/sw/bin/xauth \
+      --replace /usr/bin/ssh /run/current-system/sw/bin/ssh
+    chmod 755 $out/bin/oarsh    
       
-      #oarsh_shell
-      substitute ${cfg.package}/tools/oarsh/oarsh_shell.in $out/bin/oarsh_shell \
-          --replace "DEFAULT_SHELL=/bin/bash" "DEFAULT_SHELL=${pkgs.bash}/bin/bash" \
-          --replace "%%XAUTHCMDPATH%%" /run/current-system/sw/bin/xauth \
-          --replace "\$OARDIR/oardodo/oardodo" /run/wrappers/bin/oardodo \
-          --replace "%%OARCONFDIR%%" /etc/oar \
-          --replace "%%OARDIR%%" /run/wrappers/bin \
+    #oarsh_shell
+    substitute ${cfg.package}/tools/oarsh/oarsh_shell.in $out/bin/oarsh_shell \
+      --replace "DEFAULT_SHELL=/bin/bash" "DEFAULT_SHELL=${pkgs.bash}/bin/bash" \
+      --replace "%%XAUTHCMDPATH%%" /run/current-system/sw/bin/xauth \
+      --replace "\$OARDIR/oardodo/oardodo" /run/wrappers/bin/oardodo \
+      --replace "%%OARCONFDIR%%" /etc/oar \
+      --replace "%%OARDIR%%" /run/wrappers/bin \
 
-      chmod 755 $out/bin/oarsh_shell
+    chmod 755 $out/bin/oarsh_shell
 
-      #oardodo
-      substitute ${cfg.package}/tools/oardodo.c.in oardodo.c\
-         --replace "%%OARDIR%%" /run/wrappers/bin \
-         --replace "%%OARCONFDIR%%" /etc/oar \
-         --replace "%%XAUTHCMDPATH%%" /run/current-system/sw/bin/xauth \
-         --replace "%%ROOTUSER%%" root \
-         --replace "%%OAROWNER%%" oar
+    #oardodo
+    substitute ${cfg.package}/tools/oardodo.c.in oardodo.c\
+      --replace "%%OARDIR%%" /run/wrappers/bin \
+      --replace "%%OARCONFDIR%%" /etc/oar \
+      --replace "%%XAUTHCMDPATH%%" /run/current-system/sw/bin/xauth \
+      --replace "%%ROOTUSER%%" root \
+      --replace "%%OAROWNER%%" oar
 
-      $CC -Wall -O2 oardodo.c -o $out/oardodo_toWrap
+    $CC -Wall -O2 oardodo.c -o $out/oardodo_toWrap
 
-      #oardo -> cli
-      gen_oardo () {
-        substitute ${cfg.package}/tools/oardo.c.in oardo.c\
-           --replace TT/usr/local/oar/oarsub ${pkgs.nur.repos.augu5te.oar}/bin/$1 \
-           --replace "%%OARDIR%%" /run/wrappers/bin \
-           --replace "%%OARCONFDIR%%" /etc/oar \
-           --replace "%%XAUTHCMDPATH%%" /run/current-system/sw/bin/xauth \
-           --replace "%%OAROWNER%%" oar \
-           --replace "%%OARDOPATH%%"  /run/wrappers/bin:/run/current-system/sw/bin
-
-        $CC -Wall -O2 oardo.c -o $out/$2
-      }
+    #oardo -> cli
+    gen_oardo () {
+      substitute ${cfg.package}/tools/oardo.c.in oardo.c\
+        --replace TT/usr/local/oar/oarsub ${pkgs.nur.repos.augu5te.oar}/bin/$1 \
+        --replace "%%OARDIR%%" /run/wrappers/bin \
+        --replace "%%OARCONFDIR%%" /etc/oar \
+        --replace "%%XAUTHCMDPATH%%" /run/current-system/sw/bin/xauth \
+        --replace "%%OAROWNER%%" oar \
+        --replace "%%OARDOPATH%%"  /run/wrappers/bin:/run/current-system/sw/bin
+        
+      $CC -Wall -O2 oardo.c -o $out/$2
+    }
    
-      # generate cli
-      
-      a=(oarsub3 oarstat3 oardel3 oarnodes3 oarnodesetting3)
-      b=(oarsub oarstat oardel oarnodes oarnodesetting)
+    # generate cli
+    
+    a=(oarsub3 oarstat3 oardel3 oarnodes3 oarnodesetting3)
+    b=(oarsub oarstat oardel oarnodes oarnodesetting)
+    
+    for (( i=0; i<''${#a[@]}; i++ ))
+    do
+      echo generate ''${b[i]}
+      gen_oardo ''${a[i]} ''${b[i]}
+    done
 
-      for (( i=0; i<''${#a[@]}; i++ ))
-      do
-        echo generate ''${b[i]}
-        gen_oardo ''${a[i]} ''${b[i]}
-      done
-
-    '';
-  };
+  '';
+};
 
 in
 
@@ -202,8 +223,9 @@ in
 
     environment.etc."oar-base.conf" = { mode = "0600"; source = oarBaseConf; };
 
-    # add package
-    environment.systemPackages =  [ oarTools pkgs.taktuk pkgs.xorg.xauth pkgs.nur.repos.augu5te.oar ];
+    # add package*
+    # TODO oarVisualization conditional
+    environment.systemPackages =  [ oarVisualization oarTools pkgs.taktuk pkgs.xorg.xauth pkgs.nur.repos.augu5te.oar ];
     
     # oardodo
     security.wrappers.oardodo = {
@@ -1155,15 +1177,13 @@ EOF
       user = "oar";
       group = "oar";
       virtualHosts.default = {
-        root = "${pkgs.nix.doc}/share/doc/nix/manual";
+        #TODO root = "${pkgs.nix.doc}/share/doc/nix/manual";
         extraConfig = ''
           location @oarapi {
             rewrite ^/oarapi-priv/?(.*)$ /$1 break;
             rewrite ^/oarapi/?(.*)$ /$1 break;
           
             include ${pkgs.nginx}/conf/uwsgi_params;
-          
-            #add_header 'Content-Type' 'application/json';
           
             uwsgi_pass unix:/run/uwsgi/oarapi.sock;
             uwsgi_param HTTP_X_REMOTE_IDENT $remote_user;
@@ -1178,6 +1198,17 @@ EOF
           location ~ ^/oarapi {
             error_page 404 = @oarapi;
           }
+
+          location /monika {
+            rewrite ^/monika/?$ / break;
+            rewrite ^/monika/(.*)$ $1 break;
+            include ${pkgs.nginx}/conf/fastcgi_params;
+            try_files $fastcgi_script_name =404;
+            fastcgi_pass unix:/run/oar-fcgi.sock;
+            fastcgi_param SCRIPT_FILENAME ${oarVisualization}/monika.cgi;
+            fastcgi_param PATH_INFO $fastcgi_script_name;
+          }
+
         '';
       };
     };
